@@ -5,7 +5,7 @@ services:
     rootDir: backend
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python app.py
+    startCommand: gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT app:app
     healthCheckPath: /health
     autoDeploy: true
     envVars:
@@ -15,3 +15,21 @@ services:
         value: "1"
       - key: OPENAI_API_KEY
         sync: false
+
+  - type: web
+    name: safecrowd-frontend
+    env: static
+    rootDir: frontend
+    plan: free
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://safecrowd-backend.onrender.com
+      - key: VITE_SOCKET_URL
+        value: https://safecrowd-backend.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

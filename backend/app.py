@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import os
 import threading
 import time
 
@@ -186,10 +187,18 @@ def start_detection_worker():
     detector.start()
 
 
+# Initialise DB and start detection worker at import time so both
+# `python app.py` (local) and gunicorn (production) pick them up.
+init_db()
+_detection_thread = threading.Thread(target=start_detection_worker, daemon=True)
+_detection_thread.start()
+
+
 if __name__ == "__main__":
-    init_db()
-
-    detection_thread = threading.Thread(target=start_detection_worker, daemon=True)
-    detection_thread.start()
-
-    socketio.run(app, host="0.0.0.0", port=5000, debug=False)
+    socketio.run(
+        app,
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+        debug=False,
+        allow_unsafe_werkzeug=True,
+    )
